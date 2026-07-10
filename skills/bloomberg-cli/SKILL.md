@@ -41,12 +41,10 @@ missing capability instead of trying alternate fields and universes repeatedly.
 
 Expect JSON unless a user asks for `--format csv` or `--format table`. Check the
 exit code and report the structured stderr error. Do not perform a separate
-session preflight, restart Bloomberg, or look for BQNT. If `bloomberg` is not on
-PATH, prefix the command with:
-
-```powershell
-uvx --from git+https://github.com/sbctreasury/bloomberg-cli.git bloomberg
-```
+session preflight, restart Bloomberg, or look for BQNT. Require the `bloomberg`
+executable to be installed before using this skill. If it is unavailable, stop
+and direct the user to the repository's installation instructions. Never
+download, install, or execute a replacement package from within the skill.
 
 Prefer `bql --file` for multiline queries. This avoids PowerShell quoting errors.
 
