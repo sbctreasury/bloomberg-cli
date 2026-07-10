@@ -130,7 +130,7 @@ def parser() -> argparse.ArgumentParser:
         prog="bloomberg",
         description="Direct Bloomberg Terminal commands powered by xbbg.",
     )
-    root.add_argument("--version", action="version", version="%(prog)s 0.1.2")
+    root.add_argument("--version", action="version", version="%(prog)s 0.2.0")
     commands = root.add_subparsers(dest="command", required=True)
 
     price_cmd = commands.add_parser("price", help="Get a current security price")

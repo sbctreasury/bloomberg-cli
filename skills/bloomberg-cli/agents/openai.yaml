@@ -1,4 +1,4 @@
 interface:
-  display_name: "Bloomberg CLI"
-  short_description: "Query Bloomberg through fast xbbg commands"
-  default_prompt: "Use $bloomberg-cli to query and analyze Bloomberg data."
+  display_name: "Bloomberg BQL"
+  short_description: "Run bounded Bloomberg BQL queries"
+  default_prompt: "Use $bloomberg-cli to answer this request with one efficient BQL query."

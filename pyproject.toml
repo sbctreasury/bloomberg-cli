@@ -1,7 +1,7 @@
 [project]
 name = "bloomberg-cli"
-version = "0.1.2"
-description = "Fast, JSON-first Bloomberg Terminal CLI powered by xbbg"
+version = "0.2.0"
+description = "Minimal Bloomberg BQL CLI powered by xbbg"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -12,6 +12,7 @@ dependencies = [
 
 [project.scripts]
 bloomberg = "bloomberg_cli.cli:main"
+bloomberg-bql = "bloomberg_cli.bql_cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

@@ -1,8 +1,9 @@
-# Bloomberg CLI
+# Bloomberg BQL CLI
 
-Fast, JSON-first Bloomberg Terminal commands powered directly by
-[xbbg](https://github.com/alpha-xone/xbbg). Designed for agents, automation,
-and terminal users who want Bloomberg data without an MCP transport layer.
+A thin, JSON-first command for sending Bloomberg Query Language directly to a
+logged-in Terminal through [xbbg](https://github.com/alpha-xone/xbbg). The
+primary `bloomberg-bql` command adds no session checks, security enumeration, or
+MCP transport.
 
 This is independent open-source software and is not affiliated with,
 endorsed by, or sponsored by Bloomberg Finance L.P. Bloomberg data access
@@ -17,7 +18,7 @@ requires appropriate Bloomberg licenses and entitlements.
 ## Run from GitHub
 
 ```powershell
-uvx --from git+https://github.com/sbctreasury/bloomberg-cli.git bloomberg price "AAPL US Equity"
+uvx --from git+https://github.com/sbctreasury/bloomberg-cli.git bloomberg-bql "get(px_last) for('AAPL US Equity')"
 ```
 
 Install the optional agent skill globally for Codex, Claude Code, Cursor, and
@@ -28,28 +29,38 @@ npx skills add sbctreasury/bloomberg-cli --skill bloomberg-cli -g -y
 ```
 
 The skill does not install or download executable code. Install the CLI first;
-the skill only teaches compatible agents how to use the existing `bloomberg`
-command safely.
+the skill only teaches compatible agents how to compose efficient BQL for the
+existing `bloomberg-bql` command.
 
-## Commands
+## BQL
 
 ```powershell
-bloomberg price "AAPL US Equity"
+bloomberg-bql "get(px_last) for('AAPL US Equity')"
 
-bloomberg bdp `
-  --securities "AAPL US Equity" "MSFT US Equity" `
-  --fields PX_LAST NAME
+bloomberg-bql `
+  "get(name, px_last, yield(yield_type=YTM), maturity, spread(spread_type=g)) for(bonds('AAPL US Equity'))" `
+  --format table
 
-bloomberg bdh `
-  --securities "AAPL US Equity" `
-  --fields PX_LAST `
-  --start 2025-01-01 `
-  --periodicity M
-
-bloomberg bql "get(px_last) for(['AAPL US Equity'])"
-
-bloomberg fields "cumulative collateral loss" --limit 10
+bloomberg-bql `
+  "get(count(group(id))) for(filter(bonds('AAPL US Equity'), year(maturity) == 2027))" `
+  --format table
 ```
+
+Long queries can be read from a UTF-8 file or stdin:
+
+```powershell
+bloomberg-bql --file query.bql --format json
+Get-Content query.bql | bloomberg-bql --file - --format csv
+```
+
+`bloomberg-bql` makes exactly one BQL call per invocation. The returned JSON can
+be filtered, aggregated, or charted locally without another Bloomberg request.
+
+## Legacy xbbg commands
+
+The `bloomberg` executable remains available for backward compatibility and
+direct access to the wider xbbg surface. New agent workflows should prefer
+`bloomberg-bql` whenever the request can be expressed in BQL.
 
 ## Fixed income and curves
 
