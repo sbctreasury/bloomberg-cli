@@ -9,6 +9,7 @@ import sys
 import time
 from typing import Any, Sequence
 
+from .compat import suppress_dependency_syntax_warnings
 from .surface import catalog, consume_subscription, invoke, normalize, registry
 from .workflows import AGGREGATES, build_aggregate, build_screen
 
@@ -62,7 +63,8 @@ def emit_value(value: Any, output_format: str) -> None:
 
 def _blp():
     # Deliberately lazy: help and argument errors do not import pandas/xbbg.
-    from xbbg import blp
+    with suppress_dependency_syntax_warnings():
+        from xbbg import blp
 
     return blp
 
@@ -116,7 +118,7 @@ def parser() -> argparse.ArgumentParser:
         prog="bloomberg",
         description="Direct Bloomberg Terminal commands powered by xbbg.",
     )
-    root.add_argument("--version", action="version", version="%(prog)s 0.1.0")
+    root.add_argument("--version", action="version", version="%(prog)s 0.1.1")
     commands = root.add_subparsers(dest="command", required=True)
 
     price_cmd = commands.add_parser("price", help="Get a current security price")

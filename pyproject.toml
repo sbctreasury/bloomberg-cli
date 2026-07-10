@@ -1,6 +1,6 @@
 [project]
 name = "bloomberg-cli"
-version = "0.1.0"
+version = "0.1.1"
 description = "Fast, JSON-first Bloomberg Terminal CLI powered by xbbg"
 readme = "README.md"
 requires-python = ">=3.11"
