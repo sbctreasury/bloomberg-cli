@@ -71,6 +71,26 @@ def test_generic_call_repeatable_arguments(monkeypatch, capsys):
     assert result["kwargs"] == {"backend": "pandas"}
 
 
+def test_corporate_bonds_filter_maturity_with_one_request(monkeypatch, capsys):
+    calls = []
+    frame = pd.DataFrame([
+        {"ticker": "A Corp", "MATURITY": "2027-02-09", "CPN": 3.35},
+        {"ticker": "B Corp", "MATURITY": "2047-02-09", "CPN": 4.25},
+    ])
+
+    def fake_invoke(name, args, kwargs):
+        calls.append((name, args, kwargs))
+        return frame
+
+    monkeypatch.setattr(cli, "invoke", fake_invoke)
+    assert cli.run(["bond", "corporate", "AAPL", "--maturity-year", "2027"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert [row["ticker"] for row in result] == ["A Corp"]
+    assert len(calls) == 1
+    assert calls[0][0] == "ext.corporate_bonds"
+    assert "MATURITY" in calls[0][2]["fields"]
+
+
 def test_catalog_includes_core_and_extensions():
     names = {row["name"] for row in surface.catalog()}
     assert "bdp" in names

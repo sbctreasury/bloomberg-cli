@@ -14,6 +14,9 @@ from .surface import catalog, consume_subscription, invoke, normalize, registry
 from .workflows import AGGREGATES, build_aggregate, build_screen
 
 
+CORPORATE_BOND_FIELDS = ["NAME", "SECURITY_DES", "MATURITY", "CPN", "AMT_OUTSTANDING"]
+
+
 def _json_value(value: Any) -> Any:
     if value is None:
         return None
@@ -59,6 +62,15 @@ def emit_value(value: Any, output_format: str) -> None:
         print(json.dumps(value, default=str))
     else:
         print(value)
+
+
+def filter_maturity_year(frame: Any, year: int) -> Any:
+    """Filter an issuer-bond result locally without another Bloomberg request."""
+    frame = normalize(frame)
+    maturity_column = next((column for column in frame.columns if str(column).upper() == "MATURITY"), None)
+    if maturity_column is None:
+        raise RuntimeError("Bloomberg issuer-bond result did not contain MATURITY")
+    return frame[frame[maturity_column].astype(str).str.startswith(f"{year:04d}-")]
 
 
 def _blp():
@@ -118,7 +130,7 @@ def parser() -> argparse.ArgumentParser:
         prog="bloomberg",
         description="Direct Bloomberg Terminal commands powered by xbbg.",
     )
-    root.add_argument("--version", action="version", version="%(prog)s 0.1.1")
+    root.add_argument("--version", action="version", version="%(prog)s 0.1.2")
     commands = root.add_subparsers(dest="command", required=True)
 
     price_cmd = commands.add_parser("price", help="Get a current security price")
@@ -155,6 +167,7 @@ def parser() -> argparse.ArgumentParser:
     bond.add_argument("--fields", nargs="+")
     bond.add_argument("--settle-date")
     bond.add_argument("--benchmark")
+    bond.add_argument("--maturity-year", type=int, help="Filter issuer bonds locally by maturity year")
     bond.add_argument("--format", choices=("json", "csv", "table"), default="json")
 
     curve = commands.add_parser("curve", help="Search Bloomberg curves and government securities")
@@ -261,11 +274,18 @@ def run(argv: Sequence[str] | None = None) -> int:
             }
             positional: list[Any] = [args.securities if args.analytic in {"curve", "yas"} else args.securities[0]]
             keywords: dict[str, Any] = {}
-            if args.fields:
+            requested_fields = args.fields
+            if args.maturity_year:
+                if args.analytic != "corporate":
+                    raise ValueError("--maturity-year is only supported by bond corporate")
+                requested_fields = list(requested_fields or CORPORATE_BOND_FIELDS)
+                if not any(field.upper() == "MATURITY" for field in requested_fields):
+                    requested_fields.append("MATURITY")
+            if requested_fields:
                 if args.analytic in {"curve", "yas"}:
-                    keywords["flds"] = args.fields
+                    keywords["flds"] = requested_fields
                 elif args.analytic in {"corporate", "preferreds"}:
-                    keywords["fields"] = args.fields
+                    keywords["fields"] = requested_fields
                 else:
                     raise ValueError(f"--fields is not supported by bond {args.analytic}")
             if args.settle_date:
@@ -276,7 +296,10 @@ def run(argv: Sequence[str] | None = None) -> int:
                 if args.analytic not in {"spreads", "yas"}:
                     raise ValueError(f"--benchmark is not supported by bond {args.analytic}")
                 keywords["benchmark"] = args.benchmark
-            emit_value(invoke(mapping[args.analytic], positional, keywords), args.format)
+            result = invoke(mapping[args.analytic], positional, keywords)
+            if args.maturity_year:
+                result = filter_maturity_year(result, args.maturity_year)
+            emit_value(result, args.format)
             return 0
 
         blp = _blp()
