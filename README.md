@@ -20,6 +20,13 @@ requires appropriate Bloomberg licenses and entitlements.
 uvx --from git+https://github.com/sbctreasury/bloomberg-cli.git bloomberg price "AAPL US Equity"
 ```
 
+Install the optional agent skill globally for Codex, Claude Code, Cursor, and
+other compatible agents:
+
+```powershell
+npx skills add sbctreasury/bloomberg-cli --skill bloomberg-cli -g -y
+```
+
 ## Commands
 
 ```powershell
@@ -38,6 +45,53 @@ bloomberg bdh `
 bloomberg bql "get(px_last) for(['AAPL US Equity'])"
 
 bloomberg fields "cumulative collateral loss" --limit 10
+```
+
+## Fixed income and curves
+
+```powershell
+# Reference data, risk, spreads, cash flows, key rates, and YAS analytics
+bloomberg bond info "AM383401 Corp"
+bloomberg bond risk "AM383401 Corp" --settle-date 2026-07-10
+bloomberg bond spreads "AM383401 Corp" --benchmark "GT10 Govt"
+bloomberg bond cashflows "AM383401 Corp"
+bloomberg bond key-rates "AM383401 Corp"
+bloomberg bond yas "AM383401 Corp" --fields YAS_BOND_YLD YAS_OAS_SPRD
+
+# Find an issuer's bonds and search Bloomberg curves
+bloomberg bond corporate "AAPL US Equity"
+bloomberg curve search --country US --currency USD
+bloomberg curve governments Treasury
+```
+
+## Screens and custom metrics
+
+The focused BQL commands accept raw universe, metric, grouping, and filter
+expressions while handling the query structure. `aggregate` returns one row per
+group rather than repeating the same aggregate on every constituent.
+
+```powershell
+bloomberg screen `
+  --universe "members('SPX Index')" `
+  --fields "name()" "gics_sector_name()" "px_last()" `
+  --where "px_last() > 100"
+
+bloomberg aggregate `
+  --universe "members('SPX Index')" `
+  --let "current=is_eps(fa_period_type=A, fa_period_offset=0)" `
+  --let "prior=is_eps(fa_period_type=A, fa_period_offset=-1)" `
+  --metric "(#current / #prior) - 1" `
+  --group "gics_sector_name()" `
+  --where "#metric > 0" `
+  --stat count `
+  --name positive_growth_companies
+```
+
+For longer BQL, avoid shell quoting entirely:
+
+```powershell
+bloomberg bql --file query.bql
+Get-Content query.bql | bloomberg bql --file -
 ```
 
 ## Complete xbbg surface
