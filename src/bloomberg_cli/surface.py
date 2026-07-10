@@ -8,12 +8,15 @@ import enum
 import inspect
 from typing import Any, Callable
 
+from .compat import suppress_dependency_syntax_warnings
+
 
 def registry(*, include_aliases: bool = True) -> dict[str, Callable[..., Any]]:
     """Return public xbbg functions from core, extensions, and markets."""
-    import xbbg
-    import xbbg.ext
-    import xbbg.markets
+    with suppress_dependency_syntax_warnings():
+        import xbbg
+        import xbbg.ext
+        import xbbg.markets
 
     found: dict[str, Callable[..., Any]] = {}
     for prefix, module in (("", xbbg), ("ext.", xbbg.ext), ("markets.", xbbg.markets)):

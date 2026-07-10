@@ -1,9 +1,11 @@
 import json
+import warnings
 
 import pandas as pd
 
 from bloomberg_cli import cli
 from bloomberg_cli import surface
+from bloomberg_cli.compat import suppress_dependency_syntax_warnings
 from bloomberg_cli.workflows import build_aggregate, build_screen
 
 
@@ -12,6 +14,14 @@ def test_frame_records_converts_dataframe():
     assert cli.frame_records(frame) == [
         {"ticker": "AAPL US Equity", "field": "PX_LAST", "value": 123.45}
     ]
+
+
+def test_dependency_syntax_warnings_are_suppressed_during_import():
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        with suppress_dependency_syntax_warnings():
+            warnings.warn(r"invalid escape sequence '\s'", SyntaxWarning)
+    assert caught == []
 
 
 def test_price_json(monkeypatch, capsys):
