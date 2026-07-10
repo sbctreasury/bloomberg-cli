@@ -8,6 +8,8 @@ import sys
 import time
 from typing import Any, Sequence
 
+from .surface import catalog, consume_subscription, invoke, normalize, registry
+
 
 def _json_value(value: Any) -> Any:
     if value is None:
@@ -44,11 +46,41 @@ def emit(frame: Any, output_format: str) -> None:
         print(frame.to_string(index=False))
 
 
+def emit_value(value: Any, output_format: str) -> None:
+    """Emit either a dataframe-like or scalar/structured result."""
+    value = normalize(value)
+    if hasattr(value, "to_dict") and hasattr(value, "columns"):
+        emit(value, output_format)
+        return
+    if output_format == "json":
+        print(json.dumps(value, default=str))
+    else:
+        print(value)
+
+
 def _blp():
     # Deliberately lazy: help and argument errors do not import pandas/xbbg.
     from xbbg import blp
 
     return blp
+
+
+def parse_token(value: str) -> Any:
+    """Parse JSON scalars/containers, falling back to the original string."""
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return value
+
+
+def parse_keywords(values: list[str]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for value in values:
+        if "=" not in value:
+            raise ValueError(f"Keyword argument must use key=value: {value}")
+        key, raw = value.split("=", 1)
+        result[key] = parse_token(raw)
+    return result
 
 
 def price(security: str, field: str) -> dict[str, Any]:
@@ -101,6 +133,23 @@ def parser() -> argparse.ArgumentParser:
     fields.add_argument("query")
     fields.add_argument("--limit", type=int, default=20)
     fields.add_argument("--format", choices=("json", "csv", "table"), default="json")
+
+    functions = commands.add_parser("functions", help="List every callable in the xbbg public surface")
+    functions.add_argument("--search", help="Filter by function, module, or description")
+    functions.add_argument("--format", choices=("json", "table"), default="table")
+
+    info = commands.add_parser("info", help="Show the signature and documentation summary for an xbbg function")
+    info.add_argument("function")
+
+    call = commands.add_parser("call", help="Call any public xbbg function using JSON arguments")
+    call.add_argument("function")
+    call.add_argument("--args", default="[]", help="JSON positional argument array")
+    call.add_argument("--kwargs", default="{}", help="JSON keyword argument object")
+    call.add_argument("--arg", action="append", default=[], help="Repeatable positional argument; JSON values are decoded")
+    call.add_argument("--kw", action="append", default=[], help="Repeatable key=value argument; JSON values are decoded")
+    call.add_argument("--stream-count", type=int, default=10, help="Maximum batches for subscription results")
+    call.add_argument("--stream-seconds", type=float, default=10.0, help="Maximum seconds for subscription results")
+    call.add_argument("--format", choices=("json", "csv", "table"), default="json")
     return root
 
 
@@ -113,6 +162,38 @@ def run(argv: Sequence[str] | None = None) -> int:
                 print(json.dumps(result, default=str))
             else:
                 print(f"{result['security']}  {result['field']}  {result['value']}")
+            return 0
+
+        if args.command == "functions":
+            rows = catalog(args.search)
+            if args.format == "json":
+                print(json.dumps(rows))
+            else:
+                import pandas as pd
+
+                print(pd.DataFrame(rows).to_string(index=False))
+            return 0
+
+        if args.command == "info":
+            functions = registry()
+            if args.function not in functions:
+                raise ValueError(f"Unknown xbbg function: {args.function}")
+            row = next(item for item in catalog() if item["name"] == args.function)
+            print(json.dumps(row))
+            return 0
+
+        if args.command == "call":
+            positional = json.loads(args.args)
+            keywords = json.loads(args.kwargs)
+            if not isinstance(positional, list):
+                raise ValueError("--args must be a JSON array")
+            if not isinstance(keywords, dict):
+                raise ValueError("--kwargs must be a JSON object")
+            positional.extend(parse_token(value) for value in args.arg)
+            keywords.update(parse_keywords(args.kw))
+            result = invoke(args.function, positional, keywords)
+            result = consume_subscription(result, args.stream_count, args.stream_seconds)
+            emit_value(result, args.format)
             return 0
 
         blp = _blp()
