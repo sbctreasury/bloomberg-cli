@@ -27,6 +27,10 @@ other compatible agents:
 npx skills add sbctreasury/bloomberg-cli --skill bloomberg-cli -g -y
 ```
 
+The skill does not install or download executable code. Install the CLI first;
+the skill only teaches compatible agents how to use the existing `bloomberg`
+command safely.
+
 ## Commands
 
 ```powershell
