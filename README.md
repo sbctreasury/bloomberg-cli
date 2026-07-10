@@ -60,6 +60,7 @@ bloomberg bond yas "AM383401 Corp" --fields YAS_BOND_YLD YAS_OAS_SPRD
 
 # Find an issuer's bonds and search Bloomberg curves
 bloomberg bond corporate "AAPL US Equity"
+bloomberg bond corporate "AAPL US Equity" --maturity-year 2027
 bloomberg curve search --country US --currency USD
 bloomberg curve governments Treasury
 ```
